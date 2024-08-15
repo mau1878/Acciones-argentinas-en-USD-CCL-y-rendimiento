@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 # Streamlit web interface for inputting tickers and time period
-st.title('Precio de activos argentinos en CCL y rendimiento actual en CCL según la fecha de compra')
+st.title('Precio de activos argentinos en CCL y rendimiento actual en CCL según la fecha de compra. MTaurus. https://x.com/MTaurus_ok')
 
 # Input for list of stocks and time period
 tickers_input = st.text_area("Ingresar los tickers de las acciones separadas por comas y con '.BA' luego de cada ticker:", "GGAL.BA, METR.BA, YPFD.BA")
