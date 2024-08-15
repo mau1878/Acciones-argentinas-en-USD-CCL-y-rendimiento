@@ -84,7 +84,7 @@ if st.button('Fetch Data'):
         y_axis_title = "Rendimiento actual en USD CCL según la fecha de compra" if display_option == "Rendimiento actual en USD CCL según la fecha de compra" else "Precios en USD CCL"
         fig.update_layout(
             title='Stock Analysis: ' + display_option,
-            xaxis_title='Date',
+            xaxis_title='Fecha',
             yaxis_title=y_axis_title,
             xaxis_rangeslider_visible=False,
             title_font_size=title_font_size,
