@@ -12,7 +12,7 @@ start_date = st.date_input("Fecha de inicio", pd.to_datetime("2023-01-01"))
 end_date = st.date_input("Fecha de finalización", pd.to_datetime("today"))  # Default to the present date
 
 # Options to select between price and profit percentage
-display_option = st.selectbox("Seleccionar datos a mostrar:", ["Precios en USD CCL", "Rendimiento actual en USD CCL según la fecha de compra"])
+display_option = st.selectbox("Seleccionar datos a mostrar:", ["Precios en ARS CCL", "Rendimiento actual en ARS CCL según la fecha de compra"])
 
 # Inputs for font size configuration
 title_font_size = st.slider("Tamaño de fuente de los títulos", min_value=10, max_value=40, value=20)
@@ -70,8 +70,15 @@ if st.button('Fetch Data'):
 
         # Depending on the selected display option, plot the data
         for ticker, stock_data in normalized_data.items():
-            y_data = stock_data['Profit_Percentage'] if display_option == "Rendimiento actual en USD CCL según la fecha de compra" else stock_data['Normalized_Price']
-            hovertext = stock_data.apply(lambda row: f"Fecha: {row.name.strftime('%Y-%m-%d')}<br>Precio: {row['Close']:.2f} USD", axis=1)
+            y_data = stock_data['Profit_Percentage'] if display_option == "Rendimiento actual en ARS CCL según la fecha de compra" else stock_data['Normalized_Price']
+            hovertext = stock_data.apply(
+                lambda row: (
+                    f"Fecha: {row.name.strftime('%Y-%m-%d')}<br>"
+                    f"Precio: {row['Close']:.2f} ARS<br>"
+                    f"Rendimiento: {row['Profit_Percentage']:.2f}%" if display_option == "Rendimiento actual en ARS CCL según la fecha de compra"
+                    else f"Fecha: {row.name.strftime('%Y-%m-%d')}<br>Precio: {row['Close']:.2f} ARS<br>Valor: {row['Normalized_Price']:.2f}"
+                ), axis=1
+            )
             fig.add_trace(go.Scatter(
                 x=stock_data.index,
                 y=y_data,
@@ -82,7 +89,7 @@ if st.button('Fetch Data'):
             ))
 
         # Update layout with title, labels, and font sizes
-        y_axis_title = "Rendimiento actual en USD CCL según la fecha de compra" if display_option == "Rendimiento actual en USD CCL según la fecha de compra" else "Precios en USD CCL"
+        y_axis_title = "Rendimiento actual en ARS CCL según la fecha de compra" if display_option == "Rendimiento actual en ARS CCL según la fecha de compra" else "Precios en ARS CCL"
         fig.update_layout(
             title='Stock Analysis: ' + display_option,
             xaxis_title='Fecha',
