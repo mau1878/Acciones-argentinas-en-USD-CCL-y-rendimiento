@@ -65,7 +65,10 @@ if st.button('Fetch Data'):
                     
                     # Calculate traditional profit percentage
                     start_price = stock_data['Normalized_Price'].iloc[0]
-                    stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
+                    if start_price != 0:
+                        stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
+                    else:
+                        stock_data['Traditional_Profit'] = None  # Avoid division by zero
                     
                     normalized_data[ticker] = stock_data
 
