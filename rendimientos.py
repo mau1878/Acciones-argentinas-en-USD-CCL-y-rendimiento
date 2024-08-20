@@ -90,19 +90,19 @@ if st.button('Fetch Data'):
             if display_option == "Rendimiento tradicional en USD CCL":
                 y_data = stock_data['Traditional_Profit']
                 hovertext = stock_data.apply(
-                    lambda row: f"Fecha: {row.name.date()}<br>Rendimiento tradicional: {row['Traditional_Profit']:.2f}%<br>Precio: {row['Normalized_Price']:.2f} ARS",
+                    lambda row: f"Fecha: {row.name.date()}<br>Rendimiento tradicional: {row['Traditional_Profit']:.2f}%<br>Precio: {row['Normalized_Price']:.2f} USD",
                     axis=1
                 )
             elif display_option == "Rendimiento actual en USD CCL según la fecha de compra":
                 y_data = stock_data['Profit_Percentage']
                 hovertext = stock_data.apply(
-                    lambda row: f"Fecha: {row.name.date()}<br>Rendimiento actual: {row['Profit_Percentage']:.2f}%<br>Precio: {row['Normalized_Price']:.2f} ARS",
+                    lambda row: f"Fecha: {row.name.date()}<br>Rendimiento actual: {row['Profit_Percentage']:.2f}%<br>Precio: {row['Normalized_Price']:.2f} USD",
                     axis=1
                 )
             else:  # Precios en USD CCL
                 y_data = stock_data['Normalized_Price']
                 hovertext = stock_data.apply(
-                    lambda row: f"Fecha: {row.name.date()}<br>Precio: {row['Normalized_Price']:.2f} ARS",
+                    lambda row: f"Fecha: {row.name.date()}<br>Precio: {row['Normalized_Price']:.2f} USD",
                     axis=1
                 )
 
