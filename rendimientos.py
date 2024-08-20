@@ -116,7 +116,11 @@ if st.button('Fetch Data'):
             ))
 
         # Update layout with title, labels, and font sizes
-        y_axis_title = "Rendimiento actual en USD CCL según la fecha de compra" if display_option == "Rendimiento actual en USD CCL según la fecha de compra" else "Precios en USD CCL"
+        if display_option == "Rendimiento en USD CCL desde la fecha de inicio seleccionada":
+            y_axis_title = "Rendimiento porcentual en USD"
+        else:
+            y_axis_title = "Rendimiento actual en USD CCL según la fecha de compra" if display_option == "Rendimiento actual en USD CCL según la fecha de compra" else "Precios en USD CCL"
+        
         fig.update_layout(
             title='Stock Analysis: ' + display_option,
             xaxis_title='Fecha',
