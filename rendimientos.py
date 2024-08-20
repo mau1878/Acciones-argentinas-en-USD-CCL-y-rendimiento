@@ -31,13 +31,19 @@ if st.button('Fetch Data'):
         try:
             stock = yf.Ticker(ticker)
             hist = stock.history(start=start_date, end=end_date)
-            if not hist.empty:
-                hist['Ticker'] = ticker
-                data[ticker] = hist
-            else:
-                st.warning(f"No data fetched for {ticker}.")
+            hist['Ticker'] = ticker
+            data[ticker] = hist
         except Exception as e:
             st.warning(f"Failed to fetch data for {ticker}: {e}")
+
+    # Convert datetime index to timezone-naive
+    for ticker in data:
+        if data[ticker].index.tz is not None:
+            data[ticker].index = data[ticker].index.tz_localize(None)
+
+    # Convert start_date and end_date to timezone-naive
+    start_date = pd.to_datetime(start_date).tz_localize(None)
+    end_date = pd.to_datetime(end_date).tz_localize(None)
 
     # Ensure YPFD.BA and YPF are present
     if "YPF" not in data or "YPFD.BA" not in data:
@@ -62,17 +68,17 @@ if st.button('Fetch Data'):
                     stock_data = stock_data.reindex(argentina_dates, method='ffill')
                     stock_data['Normalized_Price'] = stock_data['Close'] / daily_ratio
 
-                    # Locate the first available start price before or on the start date
-                    start_price = stock_data['Normalized_Price'].loc[:start_date].ffill().iloc[-1]
-                    if pd.isna(start_price) or start_price == 0:
-                        st.warning(f"Start price is NaN or zero for {ticker}. Check data availability.")
-                        stock_data['Traditional_Profit'] = None  # Avoid division by zero or NaN
-                    else:
-                        stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
-
                     # Calculate profit percentage based on today's price
                     today_price = stock_data['Normalized_Price'].iloc[-1]
                     stock_data['Profit_Percentage'] = ((today_price / stock_data['Normalized_Price']) - 1) * 100
+
+                    # Calculate traditional profit percentage
+                    start_price = stock_data.loc[start_date:end_date, 'Normalized_Price'].iloc[0] if not stock_data.loc[start_date:end_date, 'Normalized_Price'].empty else None
+                    if pd.isna(start_price) or start_price == 0:
+                        st.warning(f"Start price is NaN or zero for {ticker}. Check data availability.")
+                        stock_data['Traditional_Profit'] = None
+                    else:
+                        stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
 
                     normalized_data[ticker] = stock_data
 
@@ -81,59 +87,44 @@ if st.button('Fetch Data'):
 
         # Depending on the selected display option, plot the data
         for ticker, stock_data in normalized_data.items():
-            if display_option == "Rendimiento actual en ARS CCL según la fecha de compra":
+            if display_option == "Rendimiento tradicional en ARS CCL":
+                y_data = stock_data['Traditional_Profit']
+                hovertext = stock_data.apply(
+                    lambda row: f"Fecha: {row.name.date()}<br>Rendimiento tradicional: {row['Traditional_Profit']:.2f}%<br>Precio: {row['Normalized_Price']:.2f} ARS",
+                    axis=1
+                )
+            elif display_option == "Rendimiento actual en ARS CCL según la fecha de compra":
                 y_data = stock_data['Profit_Percentage']
                 hovertext = stock_data.apply(
-                    lambda row: (
-                        f"Fecha: {row.name.strftime('%Y-%m-%d')}<br>"
-                        f"Precio: {row['Close']:.2f} ARS<br>"
-                        f"Rendimiento: {row['Profit_Percentage']:.2f}%"
-                    ), axis=1
+                    lambda row: f"Fecha: {row.name.date()}<br>Rendimiento actual: {row['Profit_Percentage']:.2f}%<br>Precio: {row['Normalized_Price']:.2f} ARS",
+                    axis=1
                 )
-            elif display_option == "Rendimiento tradicional en ARS CCL":
-                y_data = stock_data['Traditional_Profit'].fillna(0)  # Replace NaN with 0 for display purposes
-                hovertext = stock_data.apply(
-                    lambda row: (
-                        f"Fecha: {row.name.strftime('%Y-%m-%d')}<br>"
-                        f"Precio: {row['Close']:.2f} ARS<br>"
-                        f"Rendimiento tradicional: {row['Traditional_Profit']:.2f}%"
-                    ) if pd.notna(row['Traditional_Profit']) else "", axis=1
-                )
-            else:
+            else:  # Precios en ARS CCL
                 y_data = stock_data['Normalized_Price']
                 hovertext = stock_data.apply(
-                    lambda row: (
-                        f"Fecha: {row.name.strftime('%Y-%m-%d')}<br>"
-                        f"Precio: {row['Close']:.2f} ARS<br>"
-                        f"Valor: {row['Normalized_Price']:.2f}"
-                    ), axis=1
+                    lambda row: f"Fecha: {row.name.date()}<br>Precio: {row['Normalized_Price']:.2f} ARS",
+                    axis=1
                 )
-            
-            # Check if y_data contains valid data to plot
-            if y_data.isnull().all():
-                st.warning(f"No data available to plot for {ticker}.")
-            else:
-                fig.add_trace(go.Scatter(
-                    x=stock_data.index,
-                    y=y_data,
-                    mode='lines',
-                    name=ticker,
-                    text=hovertext,
-                    hoverinfo='text'
-                ))
+
+            fig.add_trace(go.Scatter(
+                x=stock_data.index,
+                y=y_data,
+                mode='lines',
+                name=ticker,
+                text=hovertext,
+                hoverinfo='text'
+            ))
 
         # Update layout with title, labels, and font sizes
-        y_axis_title = "Rendimiento actual en ARS CCL según la fecha de compra" if display_option == "Rendimiento actual en ARS CCL según la fecha de compra" else (
-            "Rendimiento tradicional en ARS CCL" if display_option == "Rendimiento tradicional en ARS CCL" else "Precios en ARS CCL"
-        )
+        y_axis_title = "Rendimiento actual en ARS CCL según la fecha de compra" if display_option == "Rendimiento actual en ARS CCL según la fecha de compra" else "Precios en ARS CCL"
         fig.update_layout(
             title='Stock Analysis: ' + display_option,
             xaxis_title='Fecha',
             yaxis_title=y_axis_title,
             xaxis_rangeslider_visible=False,
             title_font_size=title_font_size,
-            xaxis=dict(title_font_size=label_font_size, tickfont=dict(size=axis_font_size), showgrid=True),
-            yaxis=dict(title_font_size=label_font_size, tickfont=dict(size=axis_font_size), type='linear', showgrid=True),
+            xaxis=dict(title_font_size=label_font_size, tickfont=dict(size=axis_font_size), showgrid=True, gridcolor='LightGray'),
+            yaxis=dict(title_font_size=label_font_size, tickfont=dict(size=axis_font_size), type='linear', showgrid=True, gridcolor='LightGray'),
             hovermode='closest'
         )
 
