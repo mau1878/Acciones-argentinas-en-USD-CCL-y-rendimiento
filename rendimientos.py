@@ -62,8 +62,8 @@ if st.button('Fetch Data'):
                     stock_data = stock_data.reindex(argentina_dates, method='ffill')
                     stock_data['Normalized_Price'] = stock_data['Close'] / daily_ratio
 
-                    # Calculate traditional profit percentage
-                    start_price = stock_data['Normalized_Price'].iloc[0]
+                    # Locate the first available start price before or on the start date
+                    start_price = stock_data['Normalized_Price'].loc[:start_date].ffill().iloc[-1]
                     if pd.isna(start_price) or start_price == 0:
                         st.warning(f"Start price is NaN or zero for {ticker}. Check data availability.")
                         stock_data['Traditional_Profit'] = None  # Avoid division by zero or NaN
