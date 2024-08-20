@@ -31,8 +31,11 @@ if st.button('Fetch Data'):
         try:
             stock = yf.Ticker(ticker)
             hist = stock.history(start=start_date, end=end_date)
-            hist['Ticker'] = ticker
-            data[ticker] = hist
+            if not hist.empty:
+                hist['Ticker'] = ticker
+                data[ticker] = hist
+            else:
+                st.warning(f"No data fetched for {ticker}.")
         except Exception as e:
             st.warning(f"Failed to fetch data for {ticker}: {e}")
 
@@ -58,18 +61,19 @@ if st.button('Fetch Data'):
                     stock_data = data[ticker].copy()
                     stock_data = stock_data.reindex(argentina_dates, method='ffill')
                     stock_data['Normalized_Price'] = stock_data['Close'] / daily_ratio
-                    
+
+                    # Calculate traditional profit percentage
+                    start_price = stock_data['Normalized_Price'].iloc[0]
+                    if pd.isna(start_price) or start_price == 0:
+                        st.warning(f"Start price is NaN or zero for {ticker}. Check data availability.")
+                        stock_data['Traditional_Profit'] = None  # Avoid division by zero or NaN
+                    else:
+                        stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
+
                     # Calculate profit percentage based on today's price
                     today_price = stock_data['Normalized_Price'].iloc[-1]
                     stock_data['Profit_Percentage'] = ((today_price / stock_data['Normalized_Price']) - 1) * 100
-                    
-                    # Calculate traditional profit percentage
-                    start_price = stock_data['Normalized_Price'].iloc[0]
-                    if start_price != 0:
-                        stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
-                    else:
-                        stock_data['Traditional_Profit'] = None  # Avoid division by zero
-                    
+
                     normalized_data[ticker] = stock_data
 
         # Plotting with Plotly
