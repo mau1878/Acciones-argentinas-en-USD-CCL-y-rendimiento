@@ -101,14 +101,19 @@ if st.button('Fetch Data'):
                         f"Valor: {row['Normalized_Price']:.2f}"
                     ), axis=1
                 )
-            fig.add_trace(go.Scatter(
-                x=stock_data.index,
-                y=y_data,
-                mode='lines',
-                name=ticker,
-                text=hovertext,
-                hoverinfo='text'
-            ))
+            
+            # Check if y_data contains valid data to plot
+            if y_data.isnull().all():
+                st.warning(f"No data available to plot for {ticker}.")
+            else:
+                fig.add_trace(go.Scatter(
+                    x=stock_data.index,
+                    y=y_data,
+                    mode='lines',
+                    name=ticker,
+                    text=hovertext,
+                    hoverinfo='text'
+                ))
 
         # Update layout with title, labels, and font sizes
         y_axis_title = "Rendimiento actual en ARS CCL según la fecha de compra" if display_option == "Rendimiento actual en ARS CCL según la fecha de compra" else (
