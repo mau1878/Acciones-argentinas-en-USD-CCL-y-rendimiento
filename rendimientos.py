@@ -96,8 +96,8 @@ if st.button('Fetch Data'):
             yaxis_title=y_axis_title,
             xaxis_rangeslider_visible=False,
             title_font_size=title_font_size,
-            xaxis=dict(title_font_size=label_font_size, tickfont=dict(size=axis_font_size)),
-            yaxis=dict(title_font_size=label_font_size, tickfont=dict(size=axis_font_size), type='linear'),
+            xaxis=dict(title_font_size=label_font_size, tickfont=dict(size=axis_font_size), showgrid=True),
+            yaxis=dict(title_font_size=label_font_size, tickfont=dict(size=axis_font_size), type='linear', showgrid=True),
             hovermode='closest'
         )
 
