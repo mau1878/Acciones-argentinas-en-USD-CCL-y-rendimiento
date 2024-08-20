@@ -71,12 +71,13 @@ if st.button('Fetch Data'):
         # Depending on the selected display option, plot the data
         for ticker, stock_data in normalized_data.items():
             y_data = stock_data['Profit_Percentage'] if display_option == "Rendimiento actual en USD CCL según la fecha de compra" else stock_data['Normalized_Price']
+            hovertext = stock_data.apply(lambda row: f"Fecha: {row.name.strftime('%Y-%m-%d')}<br>Precio: {row['Close']:.2f} USD", axis=1)
             fig.add_trace(go.Scatter(
                 x=stock_data.index,
                 y=y_data,
                 mode='lines',
                 name=ticker,
-                text=y_data.apply(lambda x: f'{x:.2f}%') if display_option == "Rendimiento actual en USD CCL según la fecha de compra" else y_data,
+                text=hovertext,
                 hoverinfo='text'
             ))
 
