@@ -91,13 +91,13 @@ if st.button('Fetch Data'):
                     ), axis=1
                 )
             elif display_option == "Rendimiento tradicional en ARS CCL":
-                y_data = stock_data['Traditional_Profit']
+                y_data = stock_data['Traditional_Profit'].fillna(0)  # Replace NaN with 0 for display purposes
                 hovertext = stock_data.apply(
                     lambda row: (
                         f"Fecha: {row.name.strftime('%Y-%m-%d')}<br>"
                         f"Precio: {row['Close']:.2f} ARS<br>"
                         f"Rendimiento tradicional: {row['Traditional_Profit']:.2f}%"
-                    ), axis=1
+                    ) if pd.notna(row['Traditional_Profit']) else "", axis=1
                 )
             else:
                 y_data = stock_data['Normalized_Price']
