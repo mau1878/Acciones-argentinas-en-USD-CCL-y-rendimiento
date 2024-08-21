@@ -59,8 +59,43 @@ if st.button('Fetch Data'):
         # Calculate the daily ratio of YPFD.BA to YPF
         daily_ratio = ypfd_price / ypf_price
 
-        # Normalize other stocks' prices by this daily ratio
-        normalized_data = {}
+        # Prepare to plot data
+        fig = go.Figure()
+
+        # Track if zero is present in any y_data
+        zero_present = False
+
+        # Plot YPFD.BA separately if it's included
+        if "YPFD.BA" in tickers:
+            stock_data = data["YPFD.BA"].copy()
+            stock_data = stock_data.reindex(argentina_dates, method='ffill')
+            stock_data['Normalized_Price'] = stock_data['Close'] / daily_ratio
+
+            if display_option == "Rendimiento en USD CCL desde la fecha de inicio seleccionada":
+                y_data = stock_data['Normalized_Price']  # Plot normalized price
+                y_axis_title = "Rendimiento porcentual en USD"
+            elif display_option == "Rendimiento actual en USD CCL según la fecha de compra":
+                y_data = stock_data['Normalized_Price']  # Plot normalized price
+                y_axis_title = "Rendimiento actual en USD CCL según la fecha de compra"
+            else:  # Precios en USD CCL
+                y_data = stock_data['Close']  # Plot actual price
+                y_axis_title = "Precios en USD CCL"
+
+            hovertext = stock_data.apply(
+                lambda row: f"Fecha: {row.name.date()}<br>Precio: {row['Normalized_Price']:.2f} USD",
+                axis=1
+            )
+
+            fig.add_trace(go.Scatter(
+                x=stock_data.index,
+                y=y_data,
+                mode='lines',
+                name='YPFD.BA',
+                text=hovertext,
+                hoverinfo='text'
+            ))
+
+        # Plot data for other tickers
         for ticker in tickers:
             if ticker not in ["YPF", "YPFD.BA"]:
                 if ticker in data:
@@ -80,42 +115,32 @@ if st.button('Fetch Data'):
                     else:
                         stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
 
-                    normalized_data[ticker] = stock_data
+                    if display_option == "Rendimiento en USD CCL desde la fecha de inicio seleccionada":
+                        y_data = stock_data['Traditional_Profit']
+                        y_axis_title = "Rendimiento porcentual en USD"
+                    elif display_option == "Rendimiento actual en USD CCL según la fecha de compra":
+                        y_data = stock_data['Profit_Percentage']
+                        y_axis_title = "Rendimiento actual en USD CCL según la fecha de compra"
+                    else:  # Precios en USD CCL
+                        y_data = stock_data['Normalized_Price']
+                        y_axis_title = "Precios en USD CCL"
 
-        # Plotting with Plotly
-        fig = go.Figure()
+                    if (y_data == 0).any():
+                        zero_present = True
 
-        # Track if zero is present in any y_data
-        zero_present = False
+                    hovertext = stock_data.apply(
+                        lambda row: f"Fecha: {row.name.date()}<br>{'Rendimiento actual' if display_option == 'Rendimiento actual en USD CCL según la fecha de compra' else 'Rendimiento tradicional' if display_option == 'Rendimiento en USD CCL desde la fecha de inicio seleccionada' else 'Precio'}: {row[y_data.name]:.2f} USD",
+                        axis=1
+                    )
 
-        # Plot data for each ticker
-        for ticker, stock_data in normalized_data.items():
-            if display_option == "Rendimiento en USD CCL desde la fecha de inicio seleccionada":
-                y_data = stock_data['Traditional_Profit']
-                y_axis_title = "Rendimiento porcentual en USD"
-            elif display_option == "Rendimiento actual en USD CCL según la fecha de compra":
-                y_data = stock_data['Profit_Percentage']
-                y_axis_title = "Rendimiento actual en USD CCL según la fecha de compra"
-            else:  # Precios en USD CCL
-                y_data = stock_data['Normalized_Price']
-                y_axis_title = "Precios en USD CCL"
-
-            if (y_data == 0).any():
-                zero_present = True
-
-            hovertext = stock_data.apply(
-                lambda row: f"Fecha: {row.name.date()}<br>{'Rendimiento actual' if display_option == 'Rendimiento actual en USD CCL según la fecha de compra' else 'Rendimiento tradicional' if display_option == 'Rendimiento en USD CCL desde la fecha de inicio seleccionada' else 'Precio'}: {row[y_data.name]:.2f} USD",
-                axis=1
-            )
-
-            fig.add_trace(go.Scatter(
-                x=stock_data.index,
-                y=y_data,
-                mode='lines',
-                name=ticker,
-                text=hovertext,
-                hoverinfo='text'
-            ))
+                    fig.add_trace(go.Scatter(
+                        x=stock_data.index,
+                        y=y_data,
+                        mode='lines',
+                        name=ticker,
+                        text=hovertext,
+                        hoverinfo='text'
+                    ))
 
         # Add horizontal red line if zero is present
         if zero_present:
