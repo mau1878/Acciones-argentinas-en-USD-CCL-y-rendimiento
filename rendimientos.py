@@ -56,16 +56,8 @@ if st.button('Fetch Data'):
         ypf_price = data["YPF"]['Close'].reindex(argentina_dates, method='ffill')
         ypfd_price = data["YPFD.BA"]['Close'].reindex(argentina_dates, method='ffill')
 
-        # Debugging: Check if ypf_price and ypfd_price are correctly aligned
-        st.write("YPF Price Data:")
-        st.write(ypf_price.head())
-        st.write("YPFD.BA Price Data:")
-        st.write(ypfd_price.head())
-
         # Calculate the daily ratio of YPFD.BA to YPF
         daily_ratio = ypfd_price / ypf_price
-        st.write("Daily Ratio:")
-        st.write(daily_ratio.head())
 
         # Normalize other stocks' prices by this daily ratio
         normalized_data = {}
@@ -75,19 +67,26 @@ if st.button('Fetch Data'):
                     stock_data = data[ticker].copy()
                     stock_data = stock_data.reindex(argentina_dates, method='ffill')
 
+                    # Fill missing values
+                    stock_data['Close'] = stock_data['Close'].fillna(method='ffill')
+
                     # Debugging: Ensure no data is missing
-                    st.write(f"Data for {ticker} before normalization:")
-                    st.write(stock_data[['Close']].head())
+                    if stock_data.empty:
+                        st.warning(f"No data available for {ticker}.")
+                        continue
 
                     stock_data['Normalized_Price'] = stock_data['Close'] / daily_ratio
 
-                    # Debugging: Check normalized prices
-                    st.write(f"Data for {ticker} after normalization:")
-                    st.write(stock_data[['Normalized_Price']].head())
+                    # Debugging: Check data before profit calculation
+                    st.write(f"Data for {ticker} before profit calculation:")
+                    st.write(stock_data[['Close', 'Normalized_Price']].head())
 
                     # Calculate profit percentage based on today's price
                     today_price = stock_data['Normalized_Price'].iloc[-1] if not stock_data['Normalized_Price'].empty else None
-                    if today_price is not None:
+                    if pd.isna(today_price) or today_price == 0:
+                        st.warning(f"Today price is NaN or zero for {ticker}. Check data availability.")
+                        stock_data['Profit_Percentage'] = None
+                    else:
                         stock_data['Profit_Percentage'] = ((today_price / stock_data['Normalized_Price']) - 1) * 100
 
                     # Calculate traditional profit percentage
@@ -171,4 +170,12 @@ if st.button('Fetch Data'):
             title='Stock Analysis: ' + display_option,
             xaxis_title='Fecha',
             yaxis_title=y_axis_title,
-            xaxis_rangeslider
+            xaxis_rangeslider_visible=False,
+            title_font_size=title_font_size,
+            xaxis=dict(title_font_size=label_font_size, tickfont=dict(size=axis_font_size), showgrid=True),
+            yaxis=dict(title_font_size=label_font_size, tickfont=dict(size=axis_font_size), showgrid=True),
+            hovermode='x'
+        )
+
+        st.plotly_chart(fig)
+
