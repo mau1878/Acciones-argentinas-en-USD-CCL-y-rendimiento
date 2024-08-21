@@ -85,26 +85,25 @@ if st.button('Fetch Data'):
         # Plotting with Plotly
         fig = go.Figure()
 
+        # Track if zero is present in any y_data
+        zero_present = False
+
         # Depending on the selected display option, plot the data
         for ticker, stock_data in normalized_data.items():
             if display_option == "Rendimiento en USD CCL desde la fecha de inicio seleccionada":
                 y_data = stock_data['Traditional_Profit']
-                hovertext = stock_data.apply(
-                    lambda row: f"Fecha: {row.name.date()}<br>Rendimiento tradicional: {row['Traditional_Profit']:.2f}%<br>Precio: {row['Normalized_Price']:.2f} USD",
-                    axis=1
-                )
             elif display_option == "Rendimiento actual en USD CCL según la fecha de compra":
                 y_data = stock_data['Profit_Percentage']
-                hovertext = stock_data.apply(
-                    lambda row: f"Fecha: {row.name.date()}<br>Rendimiento actual: {row['Profit_Percentage']:.2f}%<br>Precio: {row['Normalized_Price']:.2f} USD",
-                    axis=1
-                )
             else:  # Precios en USD CCL
                 y_data = stock_data['Normalized_Price']
-                hovertext = stock_data.apply(
-                    lambda row: f"Fecha: {row.name.date()}<br>Precio: {row['Normalized_Price']:.2f} USD",
-                    axis=1
-                )
+
+            if (y_data == 0).any():
+                zero_present = True
+
+            hovertext = stock_data.apply(
+                lambda row: f"Fecha: {row.name.date()}<br>{'Rendimiento actual' if display_option == 'Rendimiento actual en USD CCL según la fecha de compra' else 'Rendimiento tradicional' if display_option == 'Rendimiento en USD CCL desde la fecha de inicio seleccionada' else 'Precio'}: {row[y_data.name]:.2f} USD",
+                axis=1
+            )
 
             fig.add_trace(go.Scatter(
                 x=stock_data.index,
@@ -114,6 +113,17 @@ if st.button('Fetch Data'):
                 text=hovertext,
                 hoverinfo='text'
             ))
+
+        # Add horizontal red line if zero is present
+        if zero_present:
+            fig.add_shape(
+                type='line',
+                x0=stock_data.index.min(),
+                x1=stock_data.index.max(),
+                y0=0,
+                y1=0,
+                line=dict(color='Red', width=2)
+            )
 
         # Update layout with title, labels, and font sizes
         if display_option == "Rendimiento en USD CCL desde la fecha de inicio seleccionada":
