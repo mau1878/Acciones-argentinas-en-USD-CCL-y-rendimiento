@@ -23,7 +23,7 @@ axis_font_size = st.slider("Tamaño de fuente de los valores en los ejes", min_v
 if st.button('Fetch Data'):
     # Convert tickers input to list
     tickers = [ticker.strip() for ticker in tickers_input.split(',')]
-    tickers.extend(["YPF", "YPFD.BA"])  # Add YPF and YPFD.BA to the list
+    tickers.extend(["YPF", "YPFD.BA", "PAMP.BA", "PAM"])  # Add YPF, YPFD.BA, PAMP.BA, and PAM to the list
 
     # Fetch historical data
     data = {}
@@ -46,8 +46,8 @@ if st.button('Fetch Data'):
     end_date = pd.to_datetime(end_date).tz_localize(None)
 
     # Ensure YPFD.BA and YPF are present
-    if "YPF" not in data:
-        st.error("Data for YPF is missing. Please check ticker symbols.")
+    if "YPF" not in data or "YPFD.BA" not in data:
+        st.error("Data for YPF or YPFD.BA is missing. Please check ticker symbols.")
     else:
         # Align dates to Argentina working dates
         argentina_dates = data["YPF"].index
@@ -55,7 +55,7 @@ if st.button('Fetch Data'):
         # Get the price data for YPF, reindex to Argentina dates
         ypf_price = data["YPF"]['Close'].reindex(argentina_dates, method='ffill')
 
-        # Normalize other stocks' prices by the ratio
+        # Handle normalization for YPFD.BA and general case
         normalized_data = {}
         for ticker in tickers:
             if ticker in data:
@@ -65,7 +65,7 @@ if st.button('Fetch Data'):
                 if ticker == "YPFD.BA":
                     # Special normalization approach for YPFD.BA
                     try:
-                        pamp_price = data["PAMP.BA"]['Close'].reindex(argentina_dates, method='ffill') * 25
+                        pamp_price = data["PAMP.BA"]['Close'].reindex(argentina_dates, method='ffill')
                         pam_price = data["PAM"]['Close'].reindex(argentina_dates, method='ffill')
                         normalization_ratio = pamp_price / pam_price
                         stock_data['Normalized_Price'] = stock_data['Close'] / normalization_ratio
@@ -74,7 +74,7 @@ if st.button('Fetch Data'):
                         continue
                 else:
                     # General normalization approach
-                    ypfd_price = data["YPFD.BA"]['Close']
+                    ypfd_price = data["YPFD.BA"]['Close'].reindex(argentina_dates, method='ffill')
                     daily_ratio = ypfd_price / ypf_price
                     stock_data['Normalized_Price'] = stock_data['Close'] / daily_ratio
 
