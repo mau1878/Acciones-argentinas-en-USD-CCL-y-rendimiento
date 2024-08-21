@@ -101,7 +101,7 @@ if st.button('Fetch Data'):
                 zero_present = True
 
             hovertext = stock_data.apply(
-                lambda row: f"Fecha: {row.name.date()}<br>{'Rendimiento actual' if display_option == 'Rendimiento actual en USD CCL según la fecha de compra' else 'Rendimiento tradicional' if display_option == 'Rendimiento en USD CCL desde la fecha de inicio seleccionada' else 'Precio'}: {row[y_data.name]:.2f} USD",
+                lambda row: f"Fecha: {row.name.date()}<br>{'Rendimiento actual' if display_option == 'Rendimiento actual en USD CCL según la fecha de compra' else 'Rendimiento tradicional' if display_option == 'Rendimiento en USD CCL desde la fecha de inicio seleccionada' else 'Precio'}: {row[y_data.name] if row[y_data.name] is not None else 'N/A':.2f}",
                 axis=1
             )
 
