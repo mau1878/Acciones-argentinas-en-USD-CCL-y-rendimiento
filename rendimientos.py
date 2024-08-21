@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 # Streamlit web interface for inputting tickers and time period
-st.title('Precio de activos argentinos en CCL y rendimiento actual en CCL según la fecha de compra. MTaurus. https://x.com/MTaurus_ok')
+st.title('Análisis de acciones argentinas en USD CCL y rendimiento actual en CCL. MTaurus.')
 
 # Input for list of stocks and time period
 tickers_input = st.text_area("Ingresar los tickers de las acciones separadas por comas y con '.BA' luego de cada ticker:", "GGAL.BA, METR.BA, YPFD.BA")
@@ -66,6 +66,12 @@ if st.button('Fetch Data'):
                 if ticker in data:
                     stock_data = data[ticker].copy()
                     stock_data = stock_data.reindex(argentina_dates, method='ffill')
+
+                    # Debugging: Ensure no data is missing
+                    if stock_data.empty:
+                        st.warning(f"No data available for {ticker}.")
+                        continue
+
                     stock_data['Normalized_Price'] = stock_data['Close'] / daily_ratio
 
                     # Debugging: Check data before profit calculation
@@ -122,7 +128,7 @@ if st.button('Fetch Data'):
                 lambda row: (
                     f"Fecha: {row.name.date()}<br>"
                     f"{'Rendimiento actual' if display_option == 'Rendimiento actual en USD CCL según la fecha de compra' else 'Rendimiento tradicional' if display_option == 'Rendimiento en USD CCL desde la fecha de inicio seleccionada' else 'Precio'}: "
-                    f"{row[y_data.name]:.2f}" if row[y_data.name] is not None else "N/A"
+                    f"{row[y_data.name]:.2f}" if pd.notna(row[y_data.name]) else "N/A"
                 ),
                 axis=1
             )
