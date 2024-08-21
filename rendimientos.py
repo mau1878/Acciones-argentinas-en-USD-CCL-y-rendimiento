@@ -88,6 +88,23 @@ if st.button('Fetch Data'):
         # Track if zero is present in any y_data
         zero_present = False
 
+        # Function to format hovertext
+        def format_hovertext(row, display_option, y_data_name):
+            value = row[y_data_name]
+            if pd.isna(value):
+                value_text = 'N/A'
+            else:
+                value_text = f"{value:.2f}"
+
+            if display_option == 'Rendimiento actual en USD CCL según la fecha de compra':
+                label = 'Rendimiento actual'
+            elif display_option == 'Rendimiento en USD CCL desde la fecha de inicio seleccionada':
+                label = 'Rendimiento tradicional'
+            else:
+                label = 'Precio'
+            
+            return f"Fecha: {row.name.date()}<br>{label}: {value_text}"
+
         # Depending on the selected display option, plot the data
         for ticker, stock_data in normalized_data.items():
             if display_option == "Rendimiento en USD CCL desde la fecha de inicio seleccionada":
@@ -100,10 +117,7 @@ if st.button('Fetch Data'):
             if (y_data == 0).any():
                 zero_present = True
 
-            hovertext = stock_data.apply(
-                lambda row: f"Fecha: {row.name.date()}<br>{'Rendimiento actual' if display_option == 'Rendimiento actual en USD CCL según la fecha de compra' else 'Rendimiento tradicional' if display_option == 'Rendimiento en USD CCL desde la fecha de inicio seleccionada' else 'Precio'}: {row[y_data.name] if row[y_data.name] is not None else 'N/A':.2f}",
-                axis=1
-            )
+            hovertext = stock_data.apply(lambda row: format_hovertext(row, display_option, y_data.name), axis=1)
 
             fig.add_trace(go.Scatter(
                 x=stock_data.index,
@@ -144,3 +158,4 @@ if st.button('Fetch Data'):
 
         # Display the Plotly figure in Streamlit
         st.plotly_chart(fig, use_container_width=True)
+
