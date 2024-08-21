@@ -23,7 +23,7 @@ axis_font_size = st.slider("Tamaño de fuente de los valores en los ejes", min_v
 if st.button('Fetch Data'):
     # Convert tickers input to list
     tickers = [ticker.strip() for ticker in tickers_input.split(',')]
-    tickers.extend(["YPF", "YPFD.BA", "PAMP.BA", "PAM"])  # Add YPF, YPFD.BA, PAMP.BA, and PAM to the list
+    tickers.extend(["YPF", "YPFD.BA", "PAMP.BA", "PAM"])  # Add necessary tickers to the list
 
     # Fetch historical data
     data = {}
@@ -50,47 +50,52 @@ if st.button('Fetch Data'):
         st.error("Data for YPF or YPFD.BA is missing. Please check ticker symbols.")
     else:
         # Align dates to Argentina working dates
-        argentina_dates = data["YPF"].index
+        argentina_dates = data["YPFD.BA"].index
 
-        # Get the price data for YPF, reindex to Argentina dates
+        # Get the price data for YPF and YPFD.BA, reindex to Argentina dates
         ypf_price = data["YPF"]['Close'].reindex(argentina_dates, method='ffill')
+        ypfd_price = data["YPFD.BA"]['Close']
 
-        # Handle normalization for YPFD.BA and general case
+        # Calculate the daily ratio of YPFD.BA to YPF
+        daily_ratio = ypfd_price / ypf_price
+
+        # Normalize other stocks' prices by this daily ratio
         normalized_data = {}
         for ticker in tickers:
-            if ticker in data:
-                stock_data = data[ticker].copy()
-                stock_data = stock_data.reindex(argentina_dates, method='ffill')
-
-                if ticker == "YPFD.BA":
-                    # Special normalization approach for YPFD.BA
-                    try:
-                        pamp_price = data["PAMP.BA"]['Close'].reindex(argentina_dates, method='ffill')
-                        pam_price = data["PAM"]['Close'].reindex(argentina_dates, method='ffill')
-                        normalization_ratio = pamp_price / pam_price
-                        stock_data['Normalized_Price'] = stock_data['Close'] / normalization_ratio
-                    except KeyError:
-                        st.warning("Data for PAMP.BA or PAM is missing. Please check ticker symbols.")
-                        continue
-                else:
-                    # General normalization approach
-                    ypfd_price = data["YPFD.BA"]['Close'].reindex(argentina_dates, method='ffill')
-                    daily_ratio = ypfd_price / ypf_price
+            if ticker not in ["YPF", "YPFD.BA"]:
+                if ticker in data:
+                    stock_data = data[ticker].copy()
+                    stock_data = stock_data.reindex(argentina_dates, method='ffill')
                     stock_data['Normalized_Price'] = stock_data['Close'] / daily_ratio
 
-                # Calculate profit percentage based on today's price
-                today_price = stock_data['Normalized_Price'].iloc[-1]
-                stock_data['Profit_Percentage'] = ((today_price / stock_data['Normalized_Price']) - 1) * 100
+                    # Calculate profit percentage based on today's price
+                    today_price = stock_data['Normalized_Price'].iloc[-1]
+                    stock_data['Profit_Percentage'] = ((today_price / stock_data['Normalized_Price']) - 1) * 100
 
-                # Calculate traditional profit percentage
-                start_price = stock_data.loc[start_date:end_date, 'Normalized_Price'].iloc[0] if not stock_data.loc[start_date:end_date, 'Normalized_Price'].empty else None
-                if pd.isna(start_price) or start_price == 0:
-                    st.warning(f"Start price is NaN or zero for {ticker}. Check data availability.")
-                    stock_data['Traditional_Profit'] = None
-                else:
-                    stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
+                    # Calculate traditional profit percentage
+                    start_price = stock_data.loc[start_date:end_date, 'Normalized_Price'].iloc[0] if not stock_data.loc[start_date:end_date, 'Normalized_Price'].empty else None
+                    if pd.isna(start_price) or start_price == 0:
+                        st.warning(f"Start price is NaN or zero for {ticker}. Check data availability.")
+                        stock_data['Traditional_Profit'] = None
+                    else:
+                        stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
 
-                normalized_data[ticker] = stock_data
+                    normalized_data[ticker] = stock_data
+
+        # Handle special case for YPFD.BA normalization
+        if "YPFD.BA" in normalized_data:
+            ypfd_normalized = data["YPFD.BA"].copy()
+            ypfd_normalized = ypfd_normalized.reindex(argentina_dates, method='ffill')
+            # Use PAMP.BA*25/PAM as normalization for YPFD.BA
+            if "PAMP.BA" in data and "PAM" in data:
+                pamp_price = data["PAMP.BA"]['Close'].reindex(argentina_dates, method='ffill')
+                pam_price = data["PAM"]['Close'].reindex(argentina_dates, method='ffill')
+                pam_price = pam_price.replace(0, pd.NA).ffill()  # Prevent division by zero
+                pamp_pam_ratio = pamp_price * 25 / pam_price
+                ypfd_normalized['Normalized_Price'] = ypfd_normalized['Close'] / pamp_pam_ratio
+                normalized_data["YPFD.BA"] = ypfd_normalized
+            else:
+                st.error("Data for PAMP.BA or PAM is missing. Cannot apply special normalization for YPFD.BA.")
 
         # Plotting with Plotly
         fig = go.Figure()
