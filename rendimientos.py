@@ -88,14 +88,17 @@ if st.button('Fetch Data'):
         # Track if zero is present in any y_data
         zero_present = False
 
-        # Depending on the selected display option, plot the data
+        # Plot data for each ticker
         for ticker, stock_data in normalized_data.items():
             if display_option == "Rendimiento en USD CCL desde la fecha de inicio seleccionada":
                 y_data = stock_data['Traditional_Profit']
+                y_axis_title = "Rendimiento porcentual en USD"
             elif display_option == "Rendimiento actual en USD CCL según la fecha de compra":
                 y_data = stock_data['Profit_Percentage']
+                y_axis_title = "Rendimiento actual en USD CCL según la fecha de compra"
             else:  # Precios en USD CCL
                 y_data = stock_data['Normalized_Price']
+                y_axis_title = "Precios en USD CCL"
 
             if (y_data == 0).any():
                 zero_present = True
@@ -126,11 +129,6 @@ if st.button('Fetch Data'):
             )
 
         # Update layout with title, labels, and font sizes
-        if display_option == "Rendimiento en USD CCL desde la fecha de inicio seleccionada":
-            y_axis_title = "Rendimiento porcentual en USD"
-        else:
-            y_axis_title = "Rendimiento actual en USD CCL según la fecha de compra" if display_option == "Rendimiento actual en USD CCL según la fecha de compra" else "Precios en USD CCL"
-        
         fig.update_layout(
             title='Stock Analysis: ' + display_option,
             xaxis_title='Fecha',
