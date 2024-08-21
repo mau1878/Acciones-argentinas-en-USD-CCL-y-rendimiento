@@ -23,7 +23,7 @@ axis_font_size = st.slider("Tamaño de fuente de los valores en los ejes", min_v
 if st.button('Fetch Data'):
     # Convert tickers input to list
     tickers = [ticker.strip() for ticker in tickers_input.split(',')]
-    tickers.extend(["YPF", "YPFD.BA", "PAMP.BA", "PAM"])  # Add necessary tickers to the list
+    tickers.extend(["YPF", "YPFD.BA"])  # Add YPF and YPFD.BA to the list
 
     # Fetch historical data
     data = {}
@@ -81,21 +81,6 @@ if st.button('Fetch Data'):
                         stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
 
                     normalized_data[ticker] = stock_data
-
-        # Handle special case for YPFD.BA normalization
-        if "YPFD.BA" in normalized_data:
-            ypfd_normalized = data["YPFD.BA"].copy()
-            ypfd_normalized = ypfd_normalized.reindex(argentina_dates, method='ffill')
-            # Use PAMP.BA*25/PAM as normalization for YPFD.BA
-            if "PAMP.BA" in data and "PAM" in data:
-                pamp_price = data["PAMP.BA"]['Close'].reindex(argentina_dates, method='ffill')
-                pam_price = data["PAM"]['Close'].reindex(argentina_dates, method='ffill')
-                pam_price = pam_price.replace(0, pd.NA).ffill()  # Prevent division by zero
-                pamp_pam_ratio = pamp_price * 25 / pam_price
-                ypfd_normalized['Normalized_Price'] = ypfd_normalized['Close'] / pamp_pam_ratio
-                normalized_data["YPFD.BA"] = ypfd_normalized
-            else:
-                st.error("Data for PAMP.BA or PAM is missing. Cannot apply special normalization for YPFD.BA.")
 
         # Plotting with Plotly
         fig = go.Figure()
