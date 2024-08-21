@@ -45,50 +45,59 @@ if st.button('Fetch Data'):
     start_date = pd.to_datetime(start_date).tz_localize(None)
     end_date = pd.to_datetime(end_date).tz_localize(None)
 
-    # Ensure necessary tickers are present
-    if "YPF" not in data or ("YPFD.BA" in tickers and "PAMP.BA" not in data) or ("PAMP.BA" not in data and "PAM" not in data):
-        st.error("Data for necessary tickers is missing. Please check ticker symbols.")
+    # Ensure YPFD.BA and YPF are present
+    if "YPF" not in data or "YPFD.BA" not in data:
+        st.error("Data for YPF or YPFD.BA is missing. Please check ticker symbols.")
     else:
         # Align dates to Argentina working dates
         argentina_dates = data["YPFD.BA"].index
 
-        # Calculate the normalization ratio
-        if "YPFD.BA" in tickers:
-            if "PAMP.BA" in data and "PAM" in data:
-                pamp_price = data["PAMP.BA"]['Close']
-                pam_price = data["PAM"]['Close']
-                normalization_ratio = pamp_price * 25 / pam_price
-            else:
-                st.error("Data for PAMP.BA or PAM is missing. Cannot calculate normalization ratio for YPFD.BA.")
-                normalization_ratio = None
-        else:
-            ypf_price = data["YPF"]['Close'].reindex(argentina_dates, method='ffill')
-            ypfd_price = data["YPFD.BA"]['Close']
-            normalization_ratio = ypfd_price / ypf_price
+        # Get the price data for YPF and YPFD.BA, reindex to Argentina dates
+        ypf_price = data["YPF"]['Close'].reindex(argentina_dates, method='ffill')
+        ypfd_price = data["YPFD.BA"]['Close']
 
-        # Normalize other stocks' prices
+        # Calculate the daily ratio of YPFD.BA to YPF
+        daily_ratio = ypfd_price / ypf_price
+
+        # Calculate the ratio PAMP.BA*25/PAM
+        if "PAMP.BA" in data and "PAM" in data:
+            pamp_price = data["PAMP.BA"]['Close'].reindex(argentina_dates, method='ffill')
+            pam_price = data["PAM"]['Close'].reindex(argentina_dates, method='ffill')
+            custom_ratio = (pamp_price * 25) / pam_price
+        else:
+            st.warning("Data for PAMP.BA or PAM is missing. Custom ratio will not be available.")
+            custom_ratio = None
+
+        # Normalize other stocks' prices by the daily ratio or custom ratio if YPFD.BA is included
         normalized_data = {}
         for ticker in tickers:
-            if ticker not in ["YPF", "YPFD.BA"]:
+            if ticker == "YPFD.BA":
+                if custom_ratio is not None:
+                    stock_data = data[ticker].copy()
+                    stock_data = stock_data.reindex(argentina_dates, method='ffill')
+                    stock_data['Normalized_Price'] = stock_data['Close'] / custom_ratio
+                else:
+                    st.warning("Custom ratio cannot be applied to YPFD.BA due to missing data.")
+                    continue
+            elif ticker not in ["YPF", "YPFD.BA"]:
                 if ticker in data:
                     stock_data = data[ticker].copy()
                     stock_data = stock_data.reindex(argentina_dates, method='ffill')
-                    if normalization_ratio is not None:
-                        stock_data['Normalized_Price'] = stock_data['Close'] / normalization_ratio
+                    stock_data['Normalized_Price'] = stock_data['Close'] / daily_ratio
 
-                        # Calculate profit percentage based on today's price
-                        today_price = stock_data['Normalized_Price'].iloc[-1]
-                        stock_data['Profit_Percentage'] = ((today_price / stock_data['Normalized_Price']) - 1) * 100
+                    # Calculate profit percentage based on today's price
+                    today_price = stock_data['Normalized_Price'].iloc[-1]
+                    stock_data['Profit_Percentage'] = ((today_price / stock_data['Normalized_Price']) - 1) * 100
 
-                        # Calculate traditional profit percentage
-                        start_price = stock_data.loc[start_date:end_date, 'Normalized_Price'].iloc[0] if not stock_data.loc[start_date:end_date, 'Normalized_Price'].empty else None
-                        if pd.isna(start_price) or start_price == 0:
-                            st.warning(f"Start price is NaN or zero for {ticker}. Check data availability.")
-                            stock_data['Traditional_Profit'] = None
-                        else:
-                            stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
+                    # Calculate traditional profit percentage
+                    start_price = stock_data.loc[start_date:end_date, 'Normalized_Price'].iloc[0] if not stock_data.loc[start_date:end_date, 'Normalized_Price'].empty else None
+                    if pd.isna(start_price) or start_price == 0:
+                        st.warning(f"Start price is NaN or zero for {ticker}. Check data availability.")
+                        stock_data['Traditional_Profit'] = None
+                    else:
+                        stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
 
-                        normalized_data[ticker] = stock_data
+                    normalized_data[ticker] = stock_data
 
         # Plotting with Plotly
         fig = go.Figure()
