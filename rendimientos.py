@@ -82,6 +82,11 @@ if st.button('Fetch Data'):
 
                     normalized_data[ticker] = stock_data
 
+        # Debugging: Check the contents of normalized_data
+        for ticker, stock_data in normalized_data.items():
+            st.write(f"Data for {ticker}:")
+            st.write(stock_data.head())
+        
         # Plotting with Plotly
         fig = go.Figure()
 
@@ -96,6 +101,10 @@ if st.button('Fetch Data'):
                 y_data = stock_data['Profit_Percentage']
             else:  # Precios en USD CCL
                 y_data = stock_data['Normalized_Price']
+
+            # Debugging: Check y_data values
+            st.write(f"y_data for {ticker}:")
+            st.write(y_data.dropna().head())
 
             if (y_data == 0).any():
                 zero_present = True
