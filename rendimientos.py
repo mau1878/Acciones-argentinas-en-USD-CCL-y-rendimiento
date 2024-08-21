@@ -68,6 +68,10 @@ if st.button('Fetch Data'):
                     stock_data = stock_data.reindex(argentina_dates, method='ffill')
                     stock_data['Normalized_Price'] = stock_data['Close'] / daily_ratio
 
+                    # Debugging: Check data before profit calculation
+                    st.write(f"Data for {ticker} before profit calculation:")
+                    st.write(stock_data[['Close', 'Normalized_Price']].head())
+
                     # Calculate profit percentage based on today's price
                     today_price = stock_data['Normalized_Price'].iloc[-1]
                     stock_data['Profit_Percentage'] = ((today_price / stock_data['Normalized_Price']) - 1) * 100
@@ -80,13 +84,17 @@ if st.button('Fetch Data'):
                     else:
                         stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
 
+                    # Debugging: Check traditional profit calculation
+                    st.write(f"Traditional profit for {ticker}:")
+                    st.write(stock_data[['Traditional_Profit']].head())
+
                     normalized_data[ticker] = stock_data
 
         # Debugging: Check the contents of normalized_data
         for ticker, stock_data in normalized_data.items():
             st.write(f"Data for {ticker}:")
             st.write(stock_data.head())
-        
+
         # Plotting with Plotly
         fig = go.Figure()
 
