@@ -73,13 +73,12 @@ if st.button('Fetch Data'):
                     stock_data['Profit_Percentage'] = ((today_price / stock_data['Normalized_Price']) - 1) * 100
 
                     # Calculate traditional profit percentage
-                    valid_start_index = stock_data['Normalized_Price'].loc[start_date:end_date].first_valid_index()
-                    if valid_start_index is not None:
-                        start_price = stock_data.loc[valid_start_index, 'Normalized_Price']
-                        stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
-                    else:
-                        st.warning(f"No valid data available for {ticker} from {start_date} to {end_date}.")
+                    start_price = stock_data.loc[start_date:end_date, 'Normalized_Price'].iloc[0] if not stock_data.loc[start_date:end_date, 'Normalized_Price'].empty else None
+                    if pd.isna(start_price) or start_price == 0:
+                        st.warning(f"Start price is NaN or zero for {ticker}. Check data availability.")
                         stock_data['Traditional_Profit'] = None
+                    else:
+                        stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
 
                     normalized_data[ticker] = stock_data
 
@@ -92,29 +91,33 @@ if st.button('Fetch Data'):
         # Depending on the selected display option, plot the data
         for ticker, stock_data in normalized_data.items():
             if display_option == "Rendimiento en USD CCL desde la fecha de inicio seleccionada":
-                y_data = stock_data['Traditional_Profit'].dropna()  # Drop NaN values to avoid plotting issues
+                y_data = stock_data['Traditional_Profit']
             elif display_option == "Rendimiento actual en USD CCL según la fecha de compra":
-                y_data = stock_data['Profit_Percentage'].dropna()
+                y_data = stock_data['Profit_Percentage']
             else:  # Precios en USD CCL
-                y_data = stock_data['Normalized_Price'].dropna()
+                y_data = stock_data['Normalized_Price']
 
-            if not y_data.empty:  # Ensure there's data to plot
-                if (y_data == 0).any():
-                    zero_present = True
+            if (y_data == 0).any():
+                zero_present = True
 
-                hovertext = stock_data.apply(
-                    lambda row: f"Fecha: {row.name.date()}<br>{'Rendimiento actual' if display_option == 'Rendimiento actual en USD CCL según la fecha de compra' else 'Rendimiento tradicional' if display_option == 'Rendimiento en USD CCL desde la fecha de inicio seleccionada' else 'Precio'}: {row[y_data.name] if row[y_data.name] is not None else 'N/A']:.2f}",
-                    axis=1
-                )
+            # Corrected hovertext lambda function
+            hovertext = stock_data.apply(
+                lambda row: (
+                    f"Fecha: {row.name.date()}<br>"
+                    f"{'Rendimiento actual' if display_option == 'Rendimiento actual en USD CCL según la fecha de compra' else 'Rendimiento tradicional' if display_option == 'Rendimiento en USD CCL desde la fecha de inicio seleccionada' else 'Precio'}: "
+                    f"{row[y_data.name]:.2f}" if row[y_data.name] is not None else "N/A"
+                ),
+                axis=1
+            )
 
-                fig.add_trace(go.Scatter(
-                    x=stock_data.index,
-                    y=y_data,
-                    mode='lines',
-                    name=ticker,
-                    text=hovertext,
-                    hoverinfo='text'
-                ))
+            fig.add_trace(go.Scatter(
+                x=stock_data.index,
+                y=y_data,
+                mode='lines',
+                name=ticker,
+                text=hovertext,
+                hoverinfo='text'
+            ))
 
         # Add horizontal red line if zero is present
         if zero_present:
