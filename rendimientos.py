@@ -100,6 +100,9 @@ if st.button('Fetch Data'):
             if (y_data == 0).any():
                 zero_present = True
 
+            # Ensure no None or NaN values before formatting
+            stock_data = stock_data.fillna({'Normalized_Price': 0, 'Profit_Percentage': 0, 'Traditional_Profit': 0})
+
             hovertext = stock_data.apply(
                 lambda row: f"Fecha: {row.name.date()}<br>{'Rendimiento actual' if display_option == 'Rendimiento actual en USD CCL según la fecha de compra' else 'Rendimiento tradicional' if display_option == 'Rendimiento en USD CCL desde la fecha de inicio seleccionada' else 'Precio'}: {row[y_data.name]:.2f} USD",
                 axis=1
