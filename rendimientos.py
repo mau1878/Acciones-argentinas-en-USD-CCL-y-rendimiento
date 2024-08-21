@@ -65,10 +65,12 @@ if st.button('Fetch Data'):
         # Track if zero is present in any y_data
         zero_present = False
 
-        # Plot YPFD.BA separately if it's included
+        # Normalize and plot YPFD.BA separately if it's included
         if "YPFD.BA" in tickers:
             stock_data = data["YPFD.BA"].copy()
             stock_data = stock_data.reindex(argentina_dates, method='ffill')
+
+            # Apply normalization for YPFD.BA
             stock_data['Normalized_Price'] = stock_data['Close'] / daily_ratio
 
             if display_option == "Rendimiento en USD CCL desde la fecha de inicio seleccionada":
