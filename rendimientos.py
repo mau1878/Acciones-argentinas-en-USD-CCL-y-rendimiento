@@ -54,10 +54,18 @@ if st.button('Fetch Data'):
 
         # Get the price data for YPF and YPFD.BA, reindex to Argentina dates
         ypf_price = data["YPF"]['Close'].reindex(argentina_dates, method='ffill')
-        ypfd_price = data["YPFD.BA"]['Close']
+        ypfd_price = data["YPFD.BA"]['Close'].reindex(argentina_dates, method='ffill')
+
+        # Debugging: Check if ypf_price and ypfd_price are correctly aligned
+        st.write("YPF Price Data:")
+        st.write(ypf_price.head())
+        st.write("YPFD.BA Price Data:")
+        st.write(ypfd_price.head())
 
         # Calculate the daily ratio of YPFD.BA to YPF
         daily_ratio = ypfd_price / ypf_price
+        st.write("Daily Ratio:")
+        st.write(daily_ratio.head())
 
         # Normalize other stocks' prices by this daily ratio
         normalized_data = {}
@@ -68,19 +76,19 @@ if st.button('Fetch Data'):
                     stock_data = stock_data.reindex(argentina_dates, method='ffill')
 
                     # Debugging: Ensure no data is missing
-                    if stock_data.empty:
-                        st.warning(f"No data available for {ticker}.")
-                        continue
+                    st.write(f"Data for {ticker} before normalization:")
+                    st.write(stock_data[['Close']].head())
 
                     stock_data['Normalized_Price'] = stock_data['Close'] / daily_ratio
 
-                    # Debugging: Check data before profit calculation
-                    st.write(f"Data for {ticker} before profit calculation:")
-                    st.write(stock_data[['Close', 'Normalized_Price']].head())
+                    # Debugging: Check normalized prices
+                    st.write(f"Data for {ticker} after normalization:")
+                    st.write(stock_data[['Normalized_Price']].head())
 
                     # Calculate profit percentage based on today's price
-                    today_price = stock_data['Normalized_Price'].iloc[-1]
-                    stock_data['Profit_Percentage'] = ((today_price / stock_data['Normalized_Price']) - 1) * 100
+                    today_price = stock_data['Normalized_Price'].iloc[-1] if not stock_data['Normalized_Price'].empty else None
+                    if today_price is not None:
+                        stock_data['Profit_Percentage'] = ((today_price / stock_data['Normalized_Price']) - 1) * 100
 
                     # Calculate traditional profit percentage
                     start_price = stock_data.loc[start_date:end_date, 'Normalized_Price'].iloc[0] if not stock_data.loc[start_date:end_date, 'Normalized_Price'].empty else None
@@ -163,12 +171,4 @@ if st.button('Fetch Data'):
             title='Stock Analysis: ' + display_option,
             xaxis_title='Fecha',
             yaxis_title=y_axis_title,
-            xaxis_rangeslider_visible=False,
-            title_font_size=title_font_size,
-            xaxis=dict(title_font_size=label_font_size, tickfont=dict(size=axis_font_size), showgrid=True, gridcolor='LightGray'),
-            yaxis=dict(title_font_size=label_font_size, tickfont=dict(size=axis_font_size), type='linear', showgrid=True, gridcolor='LightGray'),
-            hovermode='closest'
-        )
-
-        # Display the Plotly figure in Streamlit
-        st.plotly_chart(fig, use_container_width=True)
+            xaxis_rangeslider
