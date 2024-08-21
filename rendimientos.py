@@ -73,12 +73,13 @@ if st.button('Fetch Data'):
                     stock_data['Profit_Percentage'] = ((today_price / stock_data['Normalized_Price']) - 1) * 100
 
                     # Calculate traditional profit percentage
-                    start_price = stock_data.loc[start_date:end_date, 'Normalized_Price'].iloc[0] if not stock_data.loc[start_date:end_date, 'Normalized_Price'].empty else None
-                    if pd.isna(start_price) or start_price == 0:
-                        st.warning(f"Start price is NaN or zero for {ticker}. Check data availability.")
-                        stock_data['Traditional_Profit'] = None
-                    else:
+                    valid_start_index = stock_data['Normalized_Price'].loc[start_date:end_date].first_valid_index()
+                    if valid_start_index is not None:
+                        start_price = stock_data.loc[valid_start_index, 'Normalized_Price']
                         stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
+                    else:
+                        st.warning(f"No valid data available for {ticker} from {start_date} to {end_date}.")
+                        stock_data['Traditional_Profit'] = None
 
                     normalized_data[ticker] = stock_data
 
@@ -88,45 +89,32 @@ if st.button('Fetch Data'):
         # Track if zero is present in any y_data
         zero_present = False
 
-        # Function to format hovertext
-        def format_hovertext(row, display_option, y_data_name):
-            value = row[y_data_name]
-            if pd.isna(value):
-                value_text = 'N/A'
-            else:
-                value_text = f"{value:.2f}"
-
-            if display_option == 'Rendimiento actual en USD CCL según la fecha de compra':
-                label = 'Rendimiento actual'
-            elif display_option == 'Rendimiento en USD CCL desde la fecha de inicio seleccionada':
-                label = 'Rendimiento tradicional'
-            else:
-                label = 'Precio'
-            
-            return f"Fecha: {row.name.date()}<br>{label}: {value_text}"
-
         # Depending on the selected display option, plot the data
         for ticker, stock_data in normalized_data.items():
             if display_option == "Rendimiento en USD CCL desde la fecha de inicio seleccionada":
-                y_data = stock_data['Traditional_Profit']
+                y_data = stock_data['Traditional_Profit'].dropna()  # Drop NaN values to avoid plotting issues
             elif display_option == "Rendimiento actual en USD CCL según la fecha de compra":
-                y_data = stock_data['Profit_Percentage']
+                y_data = stock_data['Profit_Percentage'].dropna()
             else:  # Precios en USD CCL
-                y_data = stock_data['Normalized_Price']
+                y_data = stock_data['Normalized_Price'].dropna()
 
-            if (y_data == 0).any():
-                zero_present = True
+            if not y_data.empty:  # Ensure there's data to plot
+                if (y_data == 0).any():
+                    zero_present = True
 
-            hovertext = stock_data.apply(lambda row: format_hovertext(row, display_option, y_data.name), axis=1)
+                hovertext = stock_data.apply(
+                    lambda row: f"Fecha: {row.name.date()}<br>{'Rendimiento actual' if display_option == 'Rendimiento actual en USD CCL según la fecha de compra' else 'Rendimiento tradicional' if display_option == 'Rendimiento en USD CCL desde la fecha de inicio seleccionada' else 'Precio'}: {row[y_data.name] if row[y_data.name] is not None else 'N/A']:.2f}",
+                    axis=1
+                )
 
-            fig.add_trace(go.Scatter(
-                x=stock_data.index,
-                y=y_data,
-                mode='lines',
-                name=ticker,
-                text=hovertext,
-                hoverinfo='text'
-            ))
+                fig.add_trace(go.Scatter(
+                    x=stock_data.index,
+                    y=y_data,
+                    mode='lines',
+                    name=ticker,
+                    text=hovertext,
+                    hoverinfo='text'
+                ))
 
         # Add horizontal red line if zero is present
         if zero_present:
@@ -158,4 +146,3 @@ if st.button('Fetch Data'):
 
         # Display the Plotly figure in Streamlit
         st.plotly_chart(fig, use_container_width=True)
-
