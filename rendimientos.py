@@ -23,7 +23,7 @@ axis_font_size = st.slider("Tamaño de fuente de los valores en los ejes", min_v
 if st.button('Fetch Data'):
     # Convert tickers input to list
     tickers = [ticker.strip() for ticker in tickers_input.split(',')]
-    tickers.extend(["YPF", "YPFD.BA", "PAMP.BA", "PAM"])  # Add YPF, YPFD.BA, PAMP.BA, and PAM to the list
+    tickers.extend(["YPF", "YPFD.BA"])  # Add YPF and YPFD.BA to the list
 
     # Fetch historical data
     data = {}
@@ -59,26 +59,21 @@ if st.button('Fetch Data'):
         # Calculate the daily ratio of YPFD.BA to YPF
         daily_ratio = ypfd_price / ypf_price
 
-        # Calculate the ratio PAMP.BA*25/PAM
-        if "PAMP.BA" in data and "PAM" in data:
-            pamp_price = data["PAMP.BA"]['Close'].reindex(argentina_dates, method='ffill')
-            pam_price = data["PAM"]['Close'].reindex(argentina_dates, method='ffill')
-            custom_ratio = (pamp_price * 25) / pam_price
-        else:
-            st.warning("Data for PAMP.BA or PAM is missing. Custom ratio will not be available.")
-            custom_ratio = None
-
-        # Normalize other stocks' prices by the daily ratio or custom ratio if YPFD.BA is included
+        # Normalize other stocks' prices by this daily ratio
         normalized_data = {}
         for ticker in tickers:
             if ticker == "YPFD.BA":
-                if custom_ratio is not None:
+                # Special normalization for YPFD.BA using PAMP.BA*25/PAM
+                if "PAMP.BA" in data and "PAM" in data:
+                    pamp_price = data["PAMP.BA"]['Close'].reindex(argentina_dates, method='ffill')
+                    pam_price = data["PAM"]['Close'].reindex(argentina_dates, method='ffill')
+                    normalization_ratio = pamp_price * 25 / pam_price
                     stock_data = data[ticker].copy()
                     stock_data = stock_data.reindex(argentina_dates, method='ffill')
-                    stock_data['Normalized_Price'] = stock_data['Close'] / custom_ratio
+                    stock_data['Normalized_Price'] = stock_data['Close'] / normalization_ratio
+                    normalized_data[ticker] = stock_data
                 else:
-                    st.warning("Custom ratio cannot be applied to YPFD.BA due to missing data.")
-                    continue
+                    st.warning("Data for PAMP.BA or PAM is missing. Please check ticker symbols.")
             elif ticker not in ["YPF", "YPFD.BA"]:
                 if ticker in data:
                     stock_data = data[ticker].copy()
