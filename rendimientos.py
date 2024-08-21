@@ -66,7 +66,7 @@ if st.button('Fetch Data'):
                 if ticker in data:
                     stock_data = data[ticker].copy()
                     stock_data = stock_data.reindex(argentina_dates, method='ffill')
-                    stock_data['Normalized_Price'] = stock_data['Close'] / (ypf_price.reindex(stock_data.index, method='ffill'))
+                    stock_data['Normalized_Price'] = stock_data['Close'] / ypf_price
                     # Handle other calculations for YPFD.BA if needed
                     normalized_data[ticker] = stock_data
             elif ticker not in ["YPF"]:
