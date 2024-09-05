@@ -25,7 +25,7 @@ axis_font_size = st.slider("Tamaño de fuente de los valores en los ejes", min_v
 # Button to fetch data
 if st.button('Fetch Data'):
     # Convert tickers input to list
-    tickers = [ticker.strip() for ticker in tickers_input.split(',')]
+    tickers = [ticker.strip().upper() for ticker in tickers_input.split(',')]  # Convert to uppercase to handle case sensitivity
     tickers.extend(["YPF", "YPFD.BA"])  # Add YPF and YPFD.BA to the list
 
     # Fetch historical data
