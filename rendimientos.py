@@ -17,6 +17,9 @@ display_option = st.selectbox("Seleccionar datos a mostrar:", ["Precios en USD C
 # Input for selecting between adjusted and unadjusted prices
 price_type = st.selectbox("Seleccionar tipo de precio a usar:", ["Precio ajustado", "Precio sin ajustar"])
 
+# Map the user-friendly price_type to the actual columns in yfinance data
+price_column = 'Adj Close' if price_type == "Precio ajustado" else 'Close'
+
 # Inputs for font size configuration
 title_font_size = st.slider("Tamaño de fuente de los títulos", min_value=10, max_value=40, value=20)
 label_font_size = st.slider("Tamaño de fuente de los títulos de los ejes", min_value=10, max_value=30, value=14)
@@ -25,7 +28,7 @@ axis_font_size = st.slider("Tamaño de fuente de los valores en los ejes", min_v
 # Button to fetch data
 if st.button('Fetch Data'):
     # Convert tickers input to list
-    tickers = [ticker.strip().upper() for ticker in tickers_input.split(',')]  # Convert to uppercase to handle case sensitivity
+    tickers = [ticker.strip() for ticker in tickers_input.split(',')]
     tickers.extend(["YPF", "YPFD.BA"])  # Add YPF and YPFD.BA to the list
 
     # Fetch historical data
@@ -56,8 +59,8 @@ if st.button('Fetch Data'):
         argentina_dates = data["YPFD.BA"].index
 
         # Get the price data for YPF and YPFD.BA, reindex to Argentina dates
-        ypf_price = data["YPF"][price_type].reindex(argentina_dates, method='ffill')
-        ypfd_price = data["YPFD.BA"][price_type].reindex(argentina_dates, method='ffill')
+        ypf_price = data["YPF"][price_column].reindex(argentina_dates, method='ffill')
+        ypfd_price = data["YPFD.BA"][price_column].reindex(argentina_dates, method='ffill')
 
         # Calculate the daily ratio of YPFD.BA to YPF
         daily_ratio = ypfd_price / ypf_price
@@ -71,14 +74,14 @@ if st.button('Fetch Data'):
                     stock_data = stock_data.reindex(argentina_dates, method='ffill')
 
                     # Fill missing values
-                    stock_data[price_type] = stock_data[price_type].fillna(method='ffill')
+                    stock_data[price_column] = stock_data[price_column].fillna(method='ffill')
 
                     # Debugging: Ensure no data is missing
                     if stock_data.empty:
                         st.warning(f"No data available for {ticker}.")
                         continue
 
-                    stock_data['Normalized_Price'] = stock_data[price_type] / daily_ratio
+                    stock_data['Normalized_Price'] = stock_data[price_column] / daily_ratio
 
                     # Calculate profit percentage based on today's price
                     today_price = stock_data['Normalized_Price'].iloc[-1] if not stock_data['Normalized_Price'].empty else None
