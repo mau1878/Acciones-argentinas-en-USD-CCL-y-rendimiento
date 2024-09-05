@@ -14,6 +14,9 @@ end_date = st.date_input("Fecha de finalización", pd.to_datetime("today"))  # D
 # Options to select between price and profit percentage
 display_option = st.selectbox("Seleccionar datos a mostrar:", ["Precios en USD CCL", "Rendimiento actual en USD CCL según la fecha de compra", "Rendimiento en USD CCL desde la fecha de inicio seleccionada"])
 
+# Input for selecting between adjusted and unadjusted prices
+price_type = st.selectbox("Seleccionar tipo de precio a usar:", ["Precio ajustado", "Precio sin ajustar"])
+
 # Inputs for font size configuration
 title_font_size = st.slider("Tamaño de fuente de los títulos", min_value=10, max_value=40, value=20)
 label_font_size = st.slider("Tamaño de fuente de los títulos de los ejes", min_value=10, max_value=30, value=14)
@@ -53,8 +56,8 @@ if st.button('Fetch Data'):
         argentina_dates = data["YPFD.BA"].index
 
         # Get the price data for YPF and YPFD.BA, reindex to Argentina dates
-        ypf_price = data["YPF"]['Close'].reindex(argentina_dates, method='ffill')
-        ypfd_price = data["YPFD.BA"]['Close'].reindex(argentina_dates, method='ffill')
+        ypf_price = data["YPF"][price_type].reindex(argentina_dates, method='ffill')
+        ypfd_price = data["YPFD.BA"][price_type].reindex(argentina_dates, method='ffill')
 
         # Calculate the daily ratio of YPFD.BA to YPF
         daily_ratio = ypfd_price / ypf_price
@@ -68,18 +71,14 @@ if st.button('Fetch Data'):
                     stock_data = stock_data.reindex(argentina_dates, method='ffill')
 
                     # Fill missing values
-                    stock_data['Close'] = stock_data['Close'].fillna(method='ffill')
+                    stock_data[price_type] = stock_data[price_type].fillna(method='ffill')
 
                     # Debugging: Ensure no data is missing
                     if stock_data.empty:
                         st.warning(f"No data available for {ticker}.")
                         continue
 
-                    stock_data['Normalized_Price'] = stock_data['Close'] / daily_ratio
-
-                    # Debugging: Check data before profit calculation
-                    st.write(f"Data for {ticker} before profit calculation:")
-                    st.write(stock_data[['Close', 'Normalized_Price']].head())
+                    stock_data['Normalized_Price'] = stock_data[price_type] / daily_ratio
 
                     # Calculate profit percentage based on today's price
                     today_price = stock_data['Normalized_Price'].iloc[-1] if not stock_data['Normalized_Price'].empty else None
@@ -97,22 +96,10 @@ if st.button('Fetch Data'):
                     else:
                         stock_data['Traditional_Profit'] = ((stock_data['Normalized_Price'] / start_price) - 1) * 100
 
-                    # Debugging: Check traditional profit calculation
-                    st.write(f"Traditional profit for {ticker}:")
-                    st.write(stock_data[['Traditional_Profit']].head())
-
                     normalized_data[ticker] = stock_data
-
-        # Debugging: Check the contents of normalized_data
-        for ticker, stock_data in normalized_data.items():
-            st.write(f"Data for {ticker}:")
-            st.write(stock_data.head())
 
         # Plotting with Plotly
         fig = go.Figure()
-
-        # Track if zero is present in any y_data
-        zero_present = False
 
         # Depending on the selected display option, plot the data
         for ticker, stock_data in normalized_data.items():
@@ -123,53 +110,18 @@ if st.button('Fetch Data'):
             else:  # Precios en USD CCL
                 y_data = stock_data['Normalized_Price']
 
-            # Debugging: Check y_data values
-            st.write(f"y_data for {ticker}:")
-            st.write(y_data.dropna().head())
-
-            if (y_data == 0).any():
-                zero_present = True
-
-            # Corrected hovertext lambda function
-            hovertext = stock_data.apply(
-                lambda row: (
-                    f"Fecha: {row.name.date()}<br>"
-                    f"{'Rendimiento actual' if display_option == 'Rendimiento actual en USD CCL según la fecha de compra' else 'Rendimiento tradicional' if display_option == 'Rendimiento en USD CCL desde la fecha de inicio seleccionada' else 'Precio'}: "
-                    f"{row[y_data.name]:.2f}" if pd.notna(row[y_data.name]) else "N/A"
-                ),
-                axis=1
-            )
-
             fig.add_trace(go.Scatter(
                 x=stock_data.index,
                 y=y_data,
                 mode='lines',
-                name=ticker,
-                text=hovertext,
-                hoverinfo='text'
+                name=ticker
             ))
 
-        # Add horizontal red line if zero is present
-        if zero_present:
-            fig.add_shape(
-                type='line',
-                x0=stock_data.index.min(),
-                x1=stock_data.index.max(),
-                y0=0,
-                y1=0,
-                line=dict(color='Red', width=2)
-            )
-
         # Update layout with title, labels, and font sizes
-        if display_option == "Rendimiento en USD CCL desde la fecha de inicio seleccionada":
-            y_axis_title = "Rendimiento porcentual en USD"
-        else:
-            y_axis_title = "Rendimiento actual en USD CCL según la fecha de compra" if display_option == "Rendimiento actual en USD CCL según la fecha de compra" else "Precios en USD CCL"
-        
         fig.update_layout(
             title='Stock Analysis: ' + display_option,
             xaxis_title='Fecha',
-            yaxis_title=y_axis_title,
+            yaxis_title='Precios en USD CCL' if display_option == "Precios en USD CCL" else 'Rendimiento porcentual en USD',
             xaxis_rangeslider_visible=False,
             title_font_size=title_font_size,
             xaxis=dict(title_font_size=label_font_size, tickfont=dict(size=axis_font_size), showgrid=True),
